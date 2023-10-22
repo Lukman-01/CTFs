@@ -90,16 +90,26 @@ contract UnstoppableVault is IERC3156FlashLender, ReentrancyGuard, Owned, ERC462
         uint256 amount,
         bytes calldata data
     ) external returns (bool) {
+
+        // @audit-info validation for amount and token
         if (amount == 0) revert InvalidAmount(0); // fail early
         if (address(asset) != _token) revert UnsupportedCurrency(); // enforce ERC3156 requirement
+
+        // @audit-info acountind check
         uint256 balanceBefore = totalAssets();
         if (convertToShares(totalSupply) != balanceBefore) revert InvalidBalance(); // enforce ERC4626 requirement
+       
+        // @audit-info calculate fee and transfer token
         uint256 fee = flashFee(_token, amount);
         // transfer tokens out + execute callback on receiver
         ERC20(_token).safeTransfer(address(receiver), amount);
+
+        // @audit-info reciever callback and validate interface
         // callback must return magic value, otherwise assume it failed
         if (receiver.onFlashLoan(msg.sender, address(asset), amount, fee, data) != keccak256("IERC3156FlashBorrower.onFlashLoan"))
             revert CallbackFailed();
+
+        // @audit-info returning back the loan with fee
         // pull amount + fee from receiver, then pay the fee to the recipient
         ERC20(_token).safeTransferFrom(address(receiver), address(this), amount + fee);
         ERC20(_token).safeTransfer(feeRecipient, fee);
