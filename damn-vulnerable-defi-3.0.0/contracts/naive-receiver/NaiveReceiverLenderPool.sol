@@ -17,6 +17,7 @@ contract NaiveReceiverLenderPool is ReentrancyGuard, IERC3156FlashLender {
     uint256 private constant FIXED_FEE = 1 ether; // not the cheapest flash loan
     bytes32 private constant CALLBACK_SUCCESS = keccak256("ERC3156FlashBorrower.onFlashLoan");
 
+    // @audit-info customized error for gas optimization
     error RepayFailed();
     error UnsupportedCurrency();
     error CallbackFailed();
