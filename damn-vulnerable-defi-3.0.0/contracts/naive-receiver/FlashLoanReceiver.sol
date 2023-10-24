@@ -22,12 +22,13 @@ contract FlashLoanReceiver is IERC3156FlashBorrower {
     }
 
     function onFlashLoan(
-        address,
+        address,  // @audit type of address not specified
         address token,
         uint256 amount,
         uint256 fee,
         bytes calldata
     ) external returns (bytes32) {
+        // @audit no check for address zero
         assembly { // gas savings
             if iszero(eq(sload(pool.slot), caller())) {
                 mstore(0x00, 0x48f5c3ed)
@@ -35,6 +36,7 @@ contract FlashLoanReceiver is IERC3156FlashBorrower {
             }
         }
         
+        // @audit access control of the address not provided. High severity issue
         if (token != ETH)
             revert UnsupportedCurrency();
         
