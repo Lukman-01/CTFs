@@ -69,14 +69,46 @@ describe('[Challenge] The rewarder', function () {
     });
 
     it('Execution', async function () {
-        /** CODE YOUR SOLUTION HERE */
+        /** 
+         * The attacker begins by manipulating the blockchain's time to ensure they are eligible for rewards.
+         * - The `evm_increaseTime` command is used to simulate the passage of time by increasing it by 5 days (5 * 24 * 60 * 60 seconds).
+         * - This is necessary because the reward distribution mechanism in the `rewarderPool` likely only issues rewards after a certain period (in this case, every 5 days).
+         */
         await ethers.provider.send("evm_increaseTime", [5 * 24 * 60 * 60]); // 5 days
+    
+        /** 
+         * Next, the attacker deploys their malicious contract `AttackTheRewarder`.
+         * - The contract is deployed with the addresses of the flash loan pool, the reward pool, the liquidity token, and the reward token.
+         * - These addresses are passed to the constructor of the `AttackTheRewarder` contract to establish the necessary interfaces for the attack.
+         */
         this.attackerContract = await (await ethers.getContractFactory("AttackTheRewarder", player)).deploy(
             flashLoanPool.address, rewarderPool.address, liquidityToken.address, rewardToken.address
-        )
-
+        );
+    
+        /** 
+         * The attack is initiated by calling the `attack()` function on the `AttackTheRewarder` contract.
+         * - This function starts the attack by requesting a flash loan from the `flashLoanPool`.
+         * - The flash loan pool lends the entire balance of its liquidity tokens to the attacker contract.
+         * 
+         * In the `receiveFlashLoan()` function (called by the flash loan pool):
+         * 1. **Approval and Deposit**:
+         *    - The attacker contract approves the `rewarderPool` to spend the borrowed tokens.
+         *    - It then deposits the full amount of borrowed tokens into the `rewarderPool`.
+         *    - This deposit allows the attacker to claim a large portion of the available rewards, as the rewards are likely distributed based on the proportion of tokens deposited.
+         * 
+         * 2. **Withdraw**:
+         *    - Immediately after depositing, the attacker withdraws the exact same amount of tokens from the `rewarderPool`.
+         *    - This leaves the attacker's token balance unaffected, but they have now accumulated a large number of reward tokens.
+         * 
+         * 3. **Loan Repayment and Reward Transfer**:
+         *    - The attacker contract repays the flash loan by transferring the borrowed tokens back to the `flashLoanPool`.
+         *    - Finally, any reward tokens earned during the deposit are transferred to the attacker's address (`player`).
+         * 
+         * The entire process takes advantage of the reward distribution mechanism, allowing the attacker to extract rewards without any real contribution to the pool.
+         */
         await this.attackerContract.attack();
     });
+    
 
     after(async function () {
         /** SUCCESS CONDITIONS - NO NEED TO CHANGE ANYTHING HERE */
