@@ -79,8 +79,10 @@ contract TheRewarderPool {
         uint256 amountDeposited = accountingToken.balanceOfAt(msg.sender, lastSnapshotIdForRewards);
 
         if (amountDeposited > 0 && totalDeposits > 0) {
+            //@audit-issue deposited time not checked
             rewards = amountDeposited.mulDiv(REWARDS, totalDeposits);
             if (rewards > 0 && !_hasRetrievedReward(msg.sender)) {
+                //@audit-issue no check effect interaction
                 rewardToken.mint(msg.sender, rewards);
                 lastRewardTimestamps[msg.sender] = uint64(block.timestamp);
             }
